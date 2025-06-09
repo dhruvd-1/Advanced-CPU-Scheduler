@@ -37,20 +37,20 @@ class AnalyticsManager {
             algorithm: algorithmName,
             processes: processes.map(p => ({
                 id: p.id,
-                arrival: p.arrival,
-                burst: p.burst,
+                arrival: p.arrivalTime,
+                burst: p.burstTime,
                 priority: p.priority || 0
             })),
             results: {
-                avgTurnaround: results.avgTurnaround || 0,
-                avgWaiting: results.avgWaiting || 0,
-                avgResponse: results.avgResponse || 0,
+                avgTurnaround: results.avgTurnaroundTime || 0,
+                avgWaiting: results.avgWaitingTime || 0,
+                avgResponse: results.avgResponseTime || 0,
                 throughput: results.throughput || 0,
                 cpuUtilization: results.cpuUtilization || 100
             },
             timestamp: Date.now(),
             processCount: processes.length,
-            totalBurstTime: processes.reduce((sum, p) => sum + p.burst, 0)
+            totalBurstTime: processes.reduce((sum, p) => sum + (p.burstTime || 0), 0)
         };
 
         this.schedulingHistory.push(entry);
@@ -443,8 +443,23 @@ let analyticsManager;
 
 // Initialize analytics when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    analyticsManager = new AnalyticsManager();
+    // Delay initialization to ensure DOM is ready
+    setTimeout(() => {
+        if (typeof AnalyticsManager !== 'undefined') {
+            analyticsManager = new AnalyticsManager();
+        }
+    }, 500);
 });
+
+// Fix the tab initialization function
+function initializeAnalyticsTab() {
+    if (analyticsManager) {
+        analyticsManager.refreshAnalytics();
+    } else {
+        // Initialize if not already done
+        analyticsManager = new AnalyticsManager();
+    }
+}
 
 // Functions called by other modules
 function addToAnalytics(algorithmName, processes, results) {

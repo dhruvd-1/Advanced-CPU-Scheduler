@@ -11,7 +11,6 @@ let animationSpeed = 500;
 let simulationHistory = [];
 let comparisonResults = [];
 
-
 // Process Colors
 const processColors = [
     'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -68,9 +67,30 @@ function initializeApplication() {
         cpuUtilization: 100
     });
     
+    // Initialize AI components
+    if (typeof initializeAIAdvisorTab === 'function') {
+        setTimeout(() => {
+            initializeAIAdvisorTab();
+        }, 100);
+    }
+    
+    // Initialize analytics
+    if (typeof initializeAnalyticsTab === 'function') {
+        setTimeout(() => {
+            initializeAnalyticsTab();
+        }, 100);
+    }
+    
     // Initialize charts
     if (typeof Chart !== 'undefined') {
         initializeCharts();
+    }
+}
+
+function initializeCharts() {
+    // Initialize comparison chart if on comparison tab
+    if (typeof initializeComparisonTab === 'function') {
+        initializeComparisonTab();
     }
 }
 
@@ -140,21 +160,40 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     
     // Add active class to clicked tab and corresponding content
-    event.target.classList.add('active');
-    document.getElementById(tabName + '-tab').classList.add('active');
-    
-    // Initialize tab-specific content
-    switch(tabName) {
-        case 'comparison':
-            initializeComparisonTab();
-            break;
-        case 'analytics':
-            initializeAnalyticsTab();
-            break;
-        case 'ai-advisor':
-            initializeAIAdvisorTab();
-            break;
+    const clickedTab = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+    if (clickedTab) {
+        clickedTab.classList.add('active');
     }
+    
+    const tabContent = document.getElementById(tabName + '-tab');
+    if (tabContent) {
+        tabContent.classList.add('active');
+    }
+    
+    // Initialize tab-specific content with error handling
+    setTimeout(() => {
+        try {
+            switch(tabName) {
+                case 'comparison':
+                    if (typeof initializeComparisonTab === 'function') {
+                        initializeComparisonTab();
+                    }
+                    break;
+                case 'analytics':
+                    if (typeof initializeAnalyticsTab === 'function') {
+                        initializeAnalyticsTab();
+                    }
+                    break;
+                case 'ai-advisor':
+                    if (typeof initializeAIAdvisorTab === 'function') {
+                        initializeAIAdvisorTab();
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error initializing ${tabName} tab:`, error);
+        }
+    }, 100);
 }
 
 // Process Management
@@ -530,6 +569,11 @@ function storeSimulationResult() {
     if (simulationHistory.length > 50) {
         simulationHistory.shift();
     }
+    
+    // Update analytics if available
+    if (typeof addToAnalytics === 'function') {
+        addToAnalytics(currentAlgorithm, processes, result.metrics);
+    }
 }
 
 function calculateMetrics() {
@@ -577,6 +621,76 @@ function updateMetricsDisplay(stats) {
 function calculateAndDisplayStats() {
     const stats = calculateMetrics();
     updateMetricsDisplay(stats);
+}
+
+// Enhanced quantum optimization using simple heuristics
+function optimizeQuantum() {
+    collectProcesses();
+    
+    if (!processes || processes.length === 0) {
+        showAlert('Please configure processes first.');
+        return;
+    }
+    
+    // Calculate optimal quantum based on burst times
+    const avgBurstTime = processes.reduce((sum, p) => sum + p.burstTime, 0) / processes.length;
+    const maxBurstTime = Math.max(...processes.map(p => p.burstTime));
+    const minBurstTime = Math.min(...processes.map(p => p.burstTime));
+    const stdDev = Math.sqrt(processes.reduce((sum, p) => sum + Math.pow(p.burstTime - avgBurstTime, 2), 0) / processes.length);
+    
+    // Advanced heuristic: quantum should be slightly larger than average burst time
+    // but adjusted based on variance and process characteristics
+    let optimalQuantum;
+    
+    if (stdDev < 2) {
+        // Low variance - uniform workload
+        optimalQuantum = Math.max(1, Math.min(6, Math.ceil(avgBurstTime * 0.6)));
+    } else if (maxBurstTime - minBurstTime > 8) {
+        // High variance - mixed workload
+        optimalQuantum = Math.max(2, Math.min(4, Math.ceil(avgBurstTime * 0.4)));
+    } else {
+        // Moderate variance - balanced approach
+        optimalQuantum = Math.max(1, Math.min(8, Math.ceil(avgBurstTime * 0.8)));
+    }
+    
+    // Apply quantum
+    document.getElementById('quantum').value = optimalQuantum;
+    timeQuantum = optimalQuantum;
+    
+    // Show optimization details
+    const optimizationDetails = `
+🔧 **Quantum Optimization Complete**
+
+**Analysis:**
+• Average Burst Time: ${avgBurstTime.toFixed(1)} units
+• Range: ${minBurstTime} - ${maxBurstTime} units
+• Standard Deviation: ${stdDev.toFixed(1)}
+
+**Recommended Quantum: ${optimalQuantum} units**
+
+**Reasoning:**
+${stdDev < 2 ? '• Low variance detected - using smaller quantum for responsiveness' :
+  maxBurstTime - minBurstTime > 8 ? '• High variance detected - balanced quantum to handle mixed workload' :
+  '• Moderate variance - optimal quantum at 80% of average burst time'}
+
+This quantum should provide a good balance between responsiveness and efficiency.
+    `;
+    
+    // Add to chat if AI tab is active
+    if (document.getElementById('ai-advisor-tab').classList.contains('active')) {
+        if (typeof chatHistory !== 'undefined') {
+            chatHistory.push({
+                type: 'ai',
+                message: optimizationDetails,
+                timestamp: new Date()
+            });
+            if (typeof updateChatDisplay === 'function') {
+                updateChatDisplay();
+            }
+        }
+    }
+    
+    updateStatusText(`Quantum optimized to ${optimalQuantum} time units`);
 }
 
 // Utility Functions
@@ -688,55 +802,7 @@ function addToComparison() {
     }
 }
 
-// Quantum optimization using simple heuristics
-function optimizeQuantum() {
-    if (!processes || processes.length === 0) {
-        showAlert('Please configure processes first.');
-        return;
-    }
-    
-    collectProcesses();
-    
-    // Calculate optimal quantum based on burst times
-    const avgBurstTime = processes.reduce((sum, p) => sum + p.burstTime, 0) / processes.length;
-    const maxBurstTime = Math.max(...processes.map(p => p.burstTime));
-    const minBurstTime = Math.min(...processes.map(p => p.burstTime));
-    
-    // Heuristic: quantum should be slightly larger than average burst time
-    // but not too large to maintain responsiveness
-    let optimalQuantum = Math.max(1, Math.min(10, Math.ceil(avgBurstTime * 0.8)));
-    
-    // Adjust based on range
-    if (maxBurstTime - minBurstTime > 5) {
-        optimalQuantum = Math.max(2, Math.min(optimalQuantum, 4));
-    }
-    
-    document.getElementById('quantum').value = optimalQuantum;
-    timeQuantum = optimalQuantum;
-    
-    updateStatusText(`Quantum optimized to ${optimalQuantum} time units`);
-}
-
-// Add this to your core.js file
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-// Add to the initializeApp function in core.js
-function initializeApp() {
-    setupAlgorithmSelection();
-    setupProcessInputs();
-    setupTabNavigation();
-    initializeAnalyticsTab();
-    initializeAIAdvisorTab();
-    
-    // Add export button after DOM is ready
-    setTimeout(() => {
-        addExportButton();
-        addExportToResults(); // Alternative placement
-    }, 100);
-}
-
+// Setup algorithm selection
 function setupAlgorithmSelection() {
     const algoCards = document.querySelectorAll('.algo-card');
     
@@ -761,77 +827,226 @@ function setupAlgorithmSelection() {
     });
 }
 
-function updateQuantumVisibility() {
-    const quantumGroup = document.getElementById('quantumGroup');
-    if (quantumGroup) {
-        if (currentAlgorithm === 'rr') {
-            quantumGroup.style.display = 'block';
-        } else {
-            quantumGroup.style.display = 'none';
-        }
+function setupProcessInputs() {
+    // Already implemented in setupEventListeners and other functions
+}
+
+function setupTabNavigation() {
+    // Tab switching is handled by the switchTab function
+}
+
+// Initialize the app
+function initializeApp() {
+    setupAlgorithmSelection();
+    setupProcessInputs();
+    setupTabNavigation();
+    
+    // Add export button after DOM is ready
+    setTimeout(() => {
+        addExportButton();
+        addExportToResults(); // Alternative placement
+    }, 100);
+}
+
+// Add export button to Gantt controls
+function addExportButton() {
+    const ganttControls = document.querySelector('.gantt-controls');
+    if (ganttControls && !document.querySelector('.export-gantt-btn')) {
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'control-btn export-gantt-btn';
+        exportBtn.innerHTML = '<i class="fas fa-camera"></i>';
+        exportBtn.title = 'Export Gantt Chart';
+        exportBtn.onclick = exportGanttChart;
+        ganttControls.appendChild(exportBtn);
     }
 }
 
-function updatePriorityVisibility() {
-    const priorityInputs = document.querySelectorAll('.priority-input');
-    priorityInputs.forEach(input => {
-        if (currentAlgorithm === 'priority_np' || currentAlgorithm === 'priority_p') {
-            input.style.display = 'block';
-        } else {
-            input.style.display = 'none';
-        }
-    });
+// Alternative: Add export to results section
+function addExportToResults() {
+    const resultsSection = document.querySelector('.results-section h3');
+    if (resultsSection && !document.querySelector('.export-results-btn')) {
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'btn btn-secondary export-results-btn';
+        exportBtn.style.cssText = 'margin-left: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;';
+        exportBtn.innerHTML = '<i class="fas fa-download"></i> Export Chart';
+        exportBtn.onclick = exportGanttChart;
+        resultsSection.appendChild(exportBtn);
+    }
 }
 
-function updateAlgorithmInfo() {
-    const algorithmInfo = document.getElementById('algorithmInfo');
-    if (!algorithmInfo) return;
+// Export Gantt chart functionality
+function exportGanttChart() {
+    const ganttContainer = document.querySelector('.gantt-container');
+    if (!ganttContainer) {
+        showAlert('No Gantt chart to export. Please run a simulation first.');
+        return;
+    }
     
-    const algorithmData = {
-        fcfs: {
-            name: 'First-Come, First-Served (FCFS)',
-            description: 'Simple scheduling algorithm that executes processes in the order they arrive. Non-preemptive and fair, but can suffer from convoy effect with long processes.'
-        },
-        sjf: {
-            name: 'Shortest Job First (SJF)',
-            description: 'Selects the process with the shortest burst time. Optimal for minimizing average waiting time but can cause starvation of longer processes.'
-        },
-        srtf: {
-            name: 'Shortest Remaining Time First (SRTF)',
-            description: 'Preemptive version of SJF. Switches to newly arrived processes if they have shorter remaining time. Provides optimal average waiting time.'
-        },
-        rr: {
-            name: 'Round Robin (RR)',
-            description: 'Time-sharing algorithm that gives each process a fixed time quantum. Provides good responsiveness and fairness but may have higher turnaround time.'
-        },
-        priority_np: {
-            name: 'Priority Scheduling (Non-preemptive)',
-            description: 'Executes processes based on priority (lower number = higher priority). Once started, process runs to completion. Can cause starvation of low-priority processes.'
-        },
-        priority_p: {
-            name: 'Priority Scheduling (Preemptive)',
-            description: 'Preemptive priority scheduling where higher priority processes can interrupt lower priority ones. Provides better responsiveness for critical tasks.'
-        }
-    };
-    
-    const info = algorithmData[currentAlgorithm] || {
-        name: 'Select an Algorithm',
-        description: 'Choose a CPU scheduling algorithm to see its detailed description and behavior.'
-    };
-    
-    algorithmInfo.innerHTML = `
-        <div class="algo-info-name">${info.name}</div>
-        <div class="algo-info-desc">${info.description}</div>
-    `;
+    // Use html2canvas if available, otherwise provide alternative
+    if (typeof html2canvas !== 'undefined') {
+        html2canvas(ganttContainer, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true
+        }).then(canvas => {
+            // Create download link
+            const link = document.createElement('a');
+            link.download = `gantt_chart_${currentAlgorithm}_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            updateStatusText('Gantt chart exported successfully');
+        }).catch(error => {
+            console.error('Export failed:', error);
+            showAlert('Export failed. Trying alternative method...');
+            exportGanttAsSVG();
+        });
+    } else {
+        // Fallback: Export as SVG
+        exportGanttAsSVG();
+    }
 }
-// Analytics Integration - Add this to core.js
+
+// Export Gantt chart as SVG
+function exportGanttAsSVG() {
+    const ganttTimeline = document.getElementById('ganttTimeline');
+    if (!ganttTimeline || ganttTimeline.children.length === 0) {
+        showAlert('No Gantt chart data to export.');
+        return;
+    }
+    
+    const svg = createSVGFromGantt();
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.download = `gantt_chart_${currentAlgorithm}_${Date.now()}.svg`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
+    updateStatusText('Gantt chart exported as SVG');
+}
+
+// Create SVG representation of Gantt chart
+function createSVGFromGantt() {
+    const ganttBars = document.querySelectorAll('.gantt-block');
+    const ganttContainer = document.querySelector('.gantt-container');
+    
+    if (!ganttBars.length) {
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><text x="50" y="100">No data to export</text></svg>';
+    }
+    
+    const containerRect = ganttContainer.getBoundingClientRect();
+    const width = Math.max(800, containerRect.width);
+    const height = Math.max(400, containerRect.height);
+    
+    let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <style>
+            .process-label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+            .time-label { font-family: Arial, sans-serif; font-size: 10px; fill: #666; }
+            .gantt-rect { stroke: #fff; stroke-width: 1; }
+        </style>
+        <rect width="100%" height="100%" fill="#f8fafc"/>`;
+    
+    // Process colors
+    const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
+    
+    ganttBars.forEach((bar, index) => {
+        const rect = bar.getBoundingClientRect();
+        const containerRect = ganttContainer.getBoundingClientRect();
+        
+        // Calculate relative position
+        const x = rect.left - containerRect.left;
+        const y = rect.top - containerRect.top;
+        const barWidth = rect.width;
+        const barHeight = rect.height;
+        
+        const processId = bar.textContent || `P${index + 1}`;
+        const color = colors[index % colors.length];
+        
+        // Add rectangle
+        svgContent += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" 
+                       fill="${color}" class="gantt-rect"/>`;
+        
+        // Add process label
+        svgContent += `<text x="${x + 5}" y="${y + barHeight/2 + 4}" class="process-label" fill="white">${processId}</text>`;
+    });
+    
+    // Add time axis
+    const timeAxis = document.getElementById('timeAxis');
+    if (timeAxis) {
+        const timeLabels = timeAxis.querySelectorAll('.time-marker');
+        timeLabels.forEach((label, index) => {
+            const labelRect = label.getBoundingClientRect();
+            const containerRect = ganttContainer.getBoundingClientRect();
+            const x = labelRect.left - containerRect.left;
+            const y = height - 30;
+            
+            svgContent += `<text x="${x}" y="${y}" class="time-label">${label.textContent}</text>`;
+        });
+    }
+    
+    svgContent += '</svg>';
+    return svgContent;
+}
+
+// Debug function to check AI functionality
+function debugAIFeatures() {
+    console.log('=== AI Features Debug ===');
+    
+    // Check if all required elements exist
+    const elements = [
+        'chatContainer',
+        'chatInput', 
+        'predictionChart',
+        'workloadType',
+        'workloadComplexity',
+        'workloadPattern',
+        'aiRecommendations'
+    ];
+    
+    elements.forEach(id => {
+        const element = document.getElementById(id);
+        console.log(`${id}: ${element ? 'Found' : 'Missing'}`);
+    });
+    
+    // Check if all required functions exist
+    const functions = [
+        'initializeAIAdvisorTab',
+        'sendChatMessage',
+        'analyzeWorkload',
+        'getSmartRecommendations', 
+        'predictPerformance',
+        'optimizeQuantum',
+        'getAIRecommendation'
+    ];
+    
+    functions.forEach(funcName => {
+        console.log(`${funcName}: ${typeof window[funcName] === 'function' ? 'Available' : 'Missing'}`);
+    });
+    
+    // Check Chart.js
+    console.log(`Chart.js: ${typeof Chart !== 'undefined' ? 'Available' : 'Missing'}`);
+    
+    // Check global variables
+    console.log(`processes: ${Array.isArray(processes) ? `Array with ${processes.length} items` : 'Not array'}`);
+    console.log(`currentAlgorithm: ${currentAlgorithm || 'Not set'}`);
+    console.log(`chatHistory: ${Array.isArray(chatHistory) ? `Array with ${chatHistory.length} items` : 'Not array'}`);
+    
+    console.log('=== End Debug ===');
+}
+
+// Analytics Integration
 function updateAnalytics() {
     if (typeof addToAnalytics === 'function' && currentResults && currentProcesses) {
         addToAnalytics(selectedAlgorithm, currentProcesses, currentResults);
         console.log('Analytics updated with simulation results');
     }
 }
-
-// Modify the existing visualize function to include analytics
-// Find the visualize function and add this line at the end:
-// updateAnalytics();
