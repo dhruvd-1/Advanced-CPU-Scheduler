@@ -80,7 +80,7 @@ function updateComparisonDisplay() {
     updateSideBySideVisualization();
 }
 
-// Update algorithm rankings
+// Update algorithm rankings - MODIFIED to show only selected metric
 function updateAlgorithmRankings() {
     const rankingsContainer = document.getElementById('algorithmRankings');
     if (!rankingsContainer || comparisonResults.length === 0) {
@@ -97,75 +97,212 @@ function updateAlgorithmRankings() {
     
     rankingsContainer.innerHTML = '';
     
-    // Create rankings for different metrics
-    const metrics = [
-        { key: 'avgTurnaroundTime', name: 'Average Turnaround Time', lower: true },
-        { key: 'avgWaitingTime', name: 'Average Waiting Time', lower: true },
-        { key: 'avgResponseTime', name: 'Average Response Time', lower: true },
-        { key: 'throughput', name: 'Throughput', lower: false }
-    ];
+    // Get the currently selected metric from the dropdown
+    const metricSelector = document.getElementById('metricSelector');
+    const selectedMetricValue = metricSelector ? metricSelector.value : 'avgTurnaround';
     
-    metrics.forEach(metric => {
-        const section = document.createElement('div');
-        section.className = 'ranking-section';
-        section.style.cssText = `
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: var(--bg-primary);
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
+    // Map dropdown values to metric objects
+    const metricMap = {
+        'avgTurnaround': { key: 'avgTurnaroundTime', name: 'Average Turnaround Time', lower: true },
+        'avgWaiting': { key: 'avgWaitingTime', name: 'Average Waiting Time', lower: true },
+        'avgResponse': { key: 'avgResponseTime', name: 'Average Response Time', lower: true },
+        'throughput': { key: 'throughput', name: 'Throughput', lower: false }
+    };
+    
+    // Get the metric object for the selected value
+    const metric = metricMap[selectedMetricValue];
+    
+    if (!metric) {
+        rankingsContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Invalid metric selected</p>
+            </div>
         `;
-        
-        const title = document.createElement('h4');
-        title.textContent = metric.name;
-        title.style.cssText = `
-            margin: 0 0 0.75rem 0;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            font-weight: 600;
-        `;
-        
-        section.appendChild(title);
-        
-        // Sort results by metric
-        const sortedResults = [...comparisonResults].sort((a, b) => {
-            const aValue = a.metrics[metric.key];
-            const bValue = b.metrics[metric.key];
-            return metric.lower ? aValue - bValue : bValue - aValue;
-        });
-        
-        sortedResults.forEach((result, index) => {
-            const rankingItem = document.createElement('div');
-            rankingItem.className = 'ranking-item fade-in';
-            rankingItem.style.animationDelay = (index * 0.1) + 's';
-            
-            const positionClass = index === 0 ? 'first' : 
-                                index === 1 ? 'second' : 
-                                index === 2 ? 'third' : 'other';
-            
-            rankingItem.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div class="ranking-position ${positionClass}">${index + 1}</div>
-                    <div>
-                        <div style="font-weight: 600; color: var(--text-primary);">${result.algorithmName}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">${result.algorithm.toUpperCase()}</div>
-                    </div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-weight: 600; color: var(--primary-color);">
-                        ${result.metrics[metric.key].toFixed(2)}${metric.key === 'throughput' ? ' proc/time' : ' units'}
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                        ${metric.lower ? (index === 0 ? 'Best' : 'Lower is better') : (index === 0 ? 'Best' : 'Higher is better')}
-                    </div>
-                </div>
-            `;
-            
-            section.appendChild(rankingItem);
-        });
-        
-        rankingsContainer.appendChild(section);
+        return;
+    }
+    
+    // Create single ranking section for selected metric
+    const section = document.createElement('div');
+    section.className = 'ranking-section';
+    section.style.cssText = `
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+    `;
+    
+    const title = document.createElement('h4');
+    title.textContent = metric.name + ' Rankings';
+    title.style.cssText = `
+        margin: 0 0 0.75rem 0;
+        color: var(--text-primary);
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--primary-color);
+    `;
+    
+    section.appendChild(title);
+    
+    // Sort results by selected metric
+    const sortedResults = [...comparisonResults].sort((a, b) => {
+        const aValue = a.metrics[metric.key];
+        const bValue = b.metrics[metric.key];
+        return metric.lower ? aValue - bValue : bValue - aValue;
     });
+    
+    sortedResults.forEach((result, index) => {
+        const rankingItem = document.createElement('div');
+        rankingItem.className = 'ranking-item fade-in';
+        rankingItem.style.animationDelay = (index * 0.1) + 's';
+        
+        const positionClass = index === 0 ? 'first' : 
+                            index === 1 ? 'second' : 
+                            index === 2 ? 'third' : 'other';
+        
+        // Add ranking item styles
+        rankingItem.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        `;
+        
+        // Add hover effect
+        rankingItem.addEventListener('mouseenter', () => {
+            rankingItem.style.transform = 'translateY(-2px)';
+            rankingItem.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        });
+        
+        rankingItem.addEventListener('mouseleave', () => {
+            rankingItem.style.transform = 'translateY(0)';
+            rankingItem.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+        });
+        
+        const performanceIndicator = index === 0 ? '🏆 BEST' : 
+                                   index === 1 ? '🥈 GOOD' : 
+                                   index === 2 ? '🥉 FAIR' : '📊 OK';
+        
+        const improvementText = metric.lower ? 
+            (index === 0 ? 'Optimal Performance' : 'Lower is better') : 
+            (index === 0 ? 'Optimal Performance' : 'Higher is better');
+        
+        rankingItem.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="ranking-position ${positionClass}" style="
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    color: white;
+                ">${index + 1}</div>
+                <div>
+                    <div style="font-weight: 600; color: var(--text-primary); font-size: 1.1rem;">
+                        ${result.algorithmName}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        ${result.algorithm.toUpperCase()} • ${performanceIndicator}
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-weight: 700; color: var(--primary-color); font-size: 1.2rem;">
+                    ${result.metrics[metric.key].toFixed(2)}${metric.key === 'throughput' ? '' : ''}
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem;">
+                    ${metric.key === 'throughput' ? 'proc/time' : 'time units'}
+                </div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem; font-style: italic;">
+                    ${improvementText}
+                </div>
+            </div>
+        `;
+        
+        section.appendChild(rankingItem);
+    });
+    
+    rankingsContainer.appendChild(section);
+    
+    // Add performance insights for the selected metric
+    addPerformanceInsights(sortedResults, metric, rankingsContainer);
+}
+
+// Add performance insights based on the selected metric
+function addPerformanceInsights(sortedResults, metric, container) {
+    const insightsSection = document.createElement('div');
+    insightsSection.style.cssText = `
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+    `;
+    
+    const bestResult = sortedResults[0];
+    const worstResult = sortedResults[sortedResults.length - 1];
+    const bestValue = bestResult.metrics[metric.key];
+    const worstValue = worstResult.metrics[metric.key];
+    
+    let improvementPercentage = 0;
+    if (metric.lower) {
+        improvementPercentage = ((worstValue - bestValue) / worstValue * 100);
+    } else {
+        improvementPercentage = ((bestValue - worstValue) / worstValue * 100);
+    }
+    
+    insightsSection.innerHTML = `
+        <h5 style="margin: 0 0 0.75rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-lightbulb" style="color: var(--warning-color);"></i>
+            Performance Insights
+        </h5>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.875rem;">
+            <div>
+                <strong style="color: var(--success-color);">Best Performer:</strong><br>
+                ${bestResult.algorithmName} with ${bestValue.toFixed(2)} ${metric.key === 'throughput' ? 'proc/time' : 'units'}
+            </div>
+            <div>
+                <strong style="color: var(--error-color);">Improvement Potential:</strong><br>
+                Up to ${improvementPercentage.toFixed(1)}% better performance possible
+            </div>
+        </div>
+        <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 6px; font-size: 0.8rem; color: var(--text-secondary);">
+            <i class="fas fa-info-circle" style="color: var(--primary-color);"></i>
+            ${getMetricRecommendation(metric, bestResult, sortedResults)}
+        </div>
+    `;
+    
+    container.appendChild(insightsSection);
+}
+
+// Get recommendation text based on metric and results
+function getMetricRecommendation(metric, bestResult, sortedResults) {
+    const algorithmName = bestResult.algorithmName;
+    
+    switch(metric.key) {
+        case 'avgTurnaroundTime':
+            return `${algorithmName} provides the shortest average turnaround time. This is ideal when you want processes to complete quickly overall. Consider this for batch processing systems.`;
+        case 'avgWaitingTime':
+            return `${algorithmName} minimizes waiting time, reducing the time processes spend in the ready queue. This improves system responsiveness and user satisfaction.`;
+        case 'avgResponseTime':
+            return `${algorithmName} offers the best response time, making it excellent for interactive systems where quick initial response is crucial. Perfect for user-facing applications.`;
+        case 'throughput':
+            return `${algorithmName} maximizes throughput, completing the most processes per unit time. This is valuable for high-volume processing environments.`;
+        default:
+            return `${algorithmName} performs best for this metric. Consider your specific system requirements when choosing an algorithm.`;
+    }
 }
 
 // Initialize comparison chart

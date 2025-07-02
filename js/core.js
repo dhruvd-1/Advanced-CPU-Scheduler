@@ -203,6 +203,7 @@ function addProcess() {
     const newProcess = document.createElement('div');
     newProcess.className = 'process-grid fade-in';
     
+    // Check if priority should be displayed
     const priorityDisplay = (currentAlgorithm === 'priority_np' || currentAlgorithm === 'priority_p') ? 'block' : 'none';
     
     newProcess.innerHTML = `
@@ -220,7 +221,7 @@ function addProcess() {
         </div>
         <div class="priority-input" style="display: ${priorityDisplay};">
             <label>Priority</label>
-            <input type="number" class="process-input" value="${Math.floor(Math.random() * 5) + 1}" min="1">
+            <input type="number" class="process-input" value="${Math.floor(Math.random() * 5) + 1}" min="1" max="10">
         </div>
     `;
     
@@ -396,8 +397,28 @@ function updateQuantumVisibility() {
 function updatePriorityVisibility() {
     const priorityInputs = document.querySelectorAll('.priority-input');
     const showPriority = currentAlgorithm === 'priority_np' || currentAlgorithm === 'priority_p';
+    
     priorityInputs.forEach(input => {
         input.style.display = showPriority ? 'block' : 'none';
+    });
+    
+    // Also ensure existing process grids have priority inputs
+    const processGrids = document.querySelectorAll('.process-grid');
+    processGrids.forEach(grid => {
+        let priorityDiv = grid.querySelector('.priority-input');
+        if (!priorityDiv && showPriority) {
+            // Create priority input if it doesn't exist
+            priorityDiv = document.createElement('div');
+            priorityDiv.className = 'priority-input';
+            priorityDiv.innerHTML = `
+                <label>Priority</label>
+                <input type="number" class="process-input" value="1" min="1" max="10">
+            `;
+            grid.appendChild(priorityDiv);
+        }
+        if (priorityDiv) {
+            priorityDiv.style.display = showPriority ? 'block' : 'none';
+        }
     });
 }
 
@@ -446,11 +467,19 @@ function collectProcesses() {
     processGrids.forEach((grid, index) => {
         const inputs = grid.querySelectorAll('input');
         if (inputs.length >= 3) {
+            let priorityValue = 1; // default priority
+            
+            // Look for priority input specifically
+            const priorityInput = grid.querySelector('.priority-input input');
+            if (priorityInput && priorityInput.style.display !== 'none') {
+                priorityValue = parseInt(priorityInput.value) || 1;
+            }
+            
             processes.push({
                 id: inputs[0].value || `P${index + 1}`,
                 arrivalTime: parseInt(inputs[1].value) || 0,
                 burstTime: parseInt(inputs[2].value) || 1,
-                priority: inputs.length > 3 ? (parseInt(inputs[3].value) || 1) : 1,
+                priority: priorityValue,
                 remainingTime: parseInt(inputs[2].value) || 1,
                 completionTime: 0,
                 turnaroundTime: 0,

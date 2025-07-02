@@ -78,15 +78,11 @@ function setupChatInterface() {
 
 // Display welcome message
 function displayWelcomeMessage() {
-    const welcomeMessages = [
-        "Hello! I'm your AI scheduling assistant. I can help you optimize CPU scheduling performance, analyze workloads, and recommend the best algorithms for your specific needs.",
-        "I can analyze your process patterns, predict performance outcomes, and suggest optimizations. What would you like to know about CPU scheduling?",
-        "Feel free to ask me about algorithm performance, workload optimization, or any scheduling concepts you'd like to understand better!"
-    ];
+    const welcomeMessage = `Hello! I'm your AI scheduling assistant. I can help you optimize CPU scheduling performance, analyze workloads, and recommend the best algorithms for your specific needs. I'm context-aware and will consider your current processes and algorithm selection when providing advice.`;
     
     chatHistory = [{
         type: 'ai',
-        message: welcomeMessages[0],
+        message: welcomeMessage,
         timestamp: new Date()
     }];
     
@@ -151,7 +147,10 @@ async function sendChatMessage() {
     
     // Process AI response
     try {
+        showTypingIndicator();
         const aiResponse = await generateAIResponse(message);
+        hideTypingIndicator();
+        
         chatHistory.push({
             type: 'ai',
             message: aiResponse,
@@ -160,6 +159,8 @@ async function sendChatMessage() {
         updateChatDisplay();
     } catch (error) {
         console.error('Chat error:', error);
+        hideTypingIndicator();
+        
         chatHistory.push({
             type: 'ai',
             message: 'I apologize, but I encountered an error. Please try asking about specific CPU scheduling topics like algorithm comparisons, performance optimization, or workload analysis.',
@@ -172,9 +173,6 @@ async function sendChatMessage() {
 // Generate AI response
 async function generateAIResponse(userMessage) {
     try {
-        // Show typing indicator
-        showTypingIndicator();
-
         // Prepare context
         const context = {
             algorithm: currentAlgorithm,
@@ -183,20 +181,13 @@ async function generateAIResponse(userMessage) {
             workloadPattern: processes.length > 0 ? detectWorkloadPattern(processes).pattern : 'Unknown'
         };
 
-        // Get response from AI API
-        let response;
+        // Get response from AI API service
         if (aiApiService && typeof aiApiService.sendMessage === 'function') {
-            response = await aiApiService.sendMessage(userMessage, context);
+            return await aiApiService.sendMessage(userMessage, context);
         } else {
-            response = getOfflineAIResponse(userMessage, context);
+            return getOfflineAIResponse(userMessage, context);
         }
-        
-        // Hide typing indicator
-        hideTypingIndicator();
-        
-        return response;
     } catch (error) {
-        hideTypingIndicator();
         console.error('AI Response Error:', error);
         
         // Fallback to offline response
@@ -508,6 +499,8 @@ Lower numbers = Higher priority (1 is highest priority)
 🕐 Time quantum tuning
 📈 Performance predictions
 ❓ Concept explanations
+
+${aiApiService && aiApiService.hasAPIKey() ? '🌟 Enhanced with OpenAI - ask me anything!' : '🔑 Add OpenAI API key for enhanced responses!'}
 
 Just ask me anything about CPU scheduling!`;
     }
@@ -1207,103 +1200,4 @@ function getAlgorithmRecommendations(workloadAnalysis) {
    }
    
    return { primary, alternative, tip };
-}
-
-// Get algorithm key from name
-function getAlgorithmKey(name) {
-   const mapping = {
-       'First-Come, First-Served (FCFS)': 'fcfs',
-       'Shortest Job First (SJF)': 'sjf',
-       'Shortest Remaining Time First (SRTF)': 'srtf',
-       'Round Robin (RR)': 'rr',
-       'Priority Scheduling (Non-preemptive)': 'priority_np',
-       'Priority Scheduling (Preemptive)': 'priority_p'
-   };
-   
-   return mapping[name] || Object.keys(mapping).find(key => key.includes(name.split(' ')[0]));
-}
-
-// Show recommendation modal
-function showRecommendationModal(recommendations, workloadAnalysis) {
-   const modal = document.createElement('div');
-   modal.style.cssText = `
-       position: fixed;
-       top: 0;
-       left: 0;
-       width: 100%;
-       height: 100%;
-       background: rgba(0, 0, 0, 0.5);
-       display: flex;
-       align-items: center;
-       justify-content: center;
-       z-index: 10000;
-   `;
-   
-   const content = document.createElement('div');
-   content.style.cssText = `
-       background: white;
-       padding: 2rem;
-       border-radius: 12px;
-       max-width: 600px;
-       width: 90%;
-       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-   `;
-   
-   content.innerHTML = `
-       <div style="text-align: center; margin-bottom: 1.5rem;">
-           <div style="font-size: 3rem; margin-bottom: 0.5rem;">🤖</div>
-           <h3 style="margin: 0; color: var(--primary-color);">AI Algorithm Recommendation</h3>
-       </div>
-       
-       <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-           <h4 style="margin: 0 0 0.5rem 0; color: var(--text-primary);">Workload Analysis</h4>
-           <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
-               ${workloadAnalysis.pattern} workload with ${workloadAnalysis.characteristics.join(', ')}
-           </p>
-       </div>
-       
-       <div style="margin-bottom: 1.5rem;">
-           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-               <span style="font-size: 1.5rem;">🥇</span>
-               <strong>Primary Recommendation: ${recommendations.primary.name}</strong>
-           </div>
-           <p style="margin: 0 0 1rem 2rem; color: var(--text-secondary); font-size: 0.875rem;">
-               ${recommendations.primary.reason}
-           </p>
-           
-           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-               <span style="font-size: 1.5rem;">🥈</span>
-               <strong>Alternative: ${recommendations.alternative.name}</strong>
-           </div>
-           <p style="margin: 0 0 1rem 2rem; color: var(--text-secondary); font-size: 0.875rem;">
-               ${recommendations.alternative.reason}
-           </p>
-           
-           <div style="background: rgba(59, 130, 246, 0.1); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
-               <strong>💡 Pro Tip:</strong> ${recommendations.tip}
-           </div>
-       </div>
-       
-       <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-           <button onclick="this.closest('.modal').remove()" 
-                   style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">
-               Got it!
-           </button>
-           <button onclick="visualize(); this.closest('.modal').remove();" 
-                   style="background: var(--primary-color); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">
-               Run Simulation
-           </button>
-       </div>
-   `;
-   
-   modal.className = 'modal';
-   modal.appendChild(content);
-   document.body.appendChild(modal);
-   
-   // Auto-close after 30 seconds
-   setTimeout(() => {
-       if (modal.parentNode) {
-           modal.remove();
-       }
-   }, 30000);
 }
