@@ -1379,6 +1379,25 @@ body {
     color: var(--danger-color);
 }
 
+
+.priority-input {
+    display: none;
+}
+
+.priority-input label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.25rem;
+}
+
+.priority-input input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
 /* API key input modal styles */
 .api-key-modal {
     animation: slideInFromTop 0.3s ease-out;
