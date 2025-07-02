@@ -16,6 +16,120 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/responsive.css">
     
+    <!-- Custom Styles for Improvements -->
+    <style>
+        /* Performance Prediction Full Width Layout */
+        .performance-prediction-card {
+            grid-column: 1 / -1; /* Takes full width */
+        }
+        
+        .prediction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .prediction-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .prediction-controls label {
+            white-space: nowrap;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .prediction-controls select {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: white;
+            min-width: 150px;
+        }
+        
+        .prediction-container {
+            width: 100%;
+            height: 300px;
+            position: relative;
+        }
+        
+        /* Updated AI Grid Layout */
+        .ai-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        /* Ranking section improvements */
+        .ranking-section {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+        
+        .ranking-section h4 {
+            margin: 0 0 0.75rem 0;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            transition: all 0.2s ease;
+        }
+        
+        .ranking-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .ranking-position {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+        }
+        
+        .ranking-position.first {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #8b5a00;
+        }
+        
+        .ranking-position.second {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            color: #666;
+        }
+        
+        .ranking-position.third {
+            background: linear-gradient(135deg, #cd7f32, #deb887);
+            color: #654321;
+        }
+        
+        .ranking-position.other {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+        }
+    </style>
+    
     <!-- Favicon -->
     <link rel="icon" href="assets/images/cpu-icon.svg" type="image/svg+xml">
 </head>
@@ -98,6 +212,11 @@
                             <div class="algo-card" data-algorithm="priority_p">
                                 <div class="algo-icon">⚡📊</div>
                                 <div class="algo-name">Priority P</div>
+                                <div class="algo-type">Preemptive</div>
+                            </div>
+                            <div class="algo-card" data-algorithm="priority_p">
+                                <div class="algo-icon">⚡📊</div>
+                                <div class="algo-name">Square Robin P</div>
                                 <div class="algo-type">Preemptive</div>
                             </div>
                         </div>
@@ -307,7 +426,7 @@
                             <canvas id="comparisonChart"></canvas>
                         </div>
                         <div class="chart-controls">
-                            <select id="metricSelector" onchange="updateComparisonChart()">
+                            <select id="metricSelector" onchange="updateComparisonChart(); updateAlgorithmRankings();">
                                 <option value="avgTurnaround">Average Turnaround Time</option>
                                 <option value="avgWaiting">Average Waiting Time</option>
                                 <option value="avgResponse">Average Response Time</option>
@@ -361,6 +480,7 @@
                             <option value="rr">Round Robin</option>
                             <option value="priority_np">Priority NP</option>
                             <option value="priority_p">Priority P</option>
+                            <option value="square_robin">Square Robin</option>
                         </select>
                     </div>
                 </div>
@@ -469,13 +589,12 @@
                             <i class="fas fa-wand-magic-sparkles"></i> Get Recommendations
                         </button>
                     </div>
+                </div>
 
-                    <!-- Performance Prediction -->
-                    <div class="ai-card">
+                <!-- Performance Prediction - Now Full Width -->
+                <div class="ai-card performance-prediction-card">
+                    <div class="prediction-header">
                         <h3><i class="fas fa-crystal-ball"></i> Performance Prediction</h3>
-                        <div class="prediction-container">
-                            <canvas id="predictionChart"></canvas>
-                        </div>
                         <div class="prediction-controls">
                             <label>Predict for algorithm:</label>
                             <select id="predictionAlgorithm">
@@ -485,13 +604,16 @@
                                 <option value="rr">Round Robin</option>
                                 <option value="priority_np">Priority NP</option>
                                 <option value="priority_p">Priority P</option>
+                                <option value="square_robin">Square Robin</option>
                             </select>
                             <button onclick="predictPerformance()" class="btn btn-secondary">
                                 <i class="fas fa-chart-line"></i> Predict
                             </button>
                         </div>
                     </div>
-
+                    <div class="prediction-container">
+                        <canvas id="predictionChart"></canvas>
+                    </div>
                 </div>
 
                 <!-- AI Chat Interface -->
@@ -525,6 +647,10 @@
     <script src="js/comparison.js"></script>
     <script src="js/analytics.js"></script>
     <script src="js/ai-advisor.js"></script>
+    <script> 
+        window.ENV = {
+        OPENAI_API_KEY: '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'  // Replace with your key
+    };</script>
 
     <!-- AI Integration Script -->
     <script>
